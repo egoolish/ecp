@@ -124,7 +124,68 @@ def splitPoint(start, end, D, min_size):
     #use needed part of distance matrix
     D = D[start:end][start:end]
 
-    raise Exception("currently unimplemented: uses C code")
+    return splitPointpseudoC(start, end, D, min_size)
+
+def splitPointpseudoC(s, e, D, min_size):
+    """ This function used to be written in C++. However, it used SEXP to return
+        a numeric vector data type, which is incompatible with Python. As such, 
+        the function is temporarily rewritten in Python, but could be made faster
+        by replacing this with a Python to C++ call.
+    """
+    best = [-1.0, float('-inf')]
+    e = e - s + 1
+
+    tau1 = min_size
+    tau2 = 2*min_size
+    cut1 = D[0:tau1-1][0:tau1-1]
+    cut2 = D[tau1:tau2-1][tau1:tau2-1]
+    cut3 = D[0:tau1-1][tau1:tau2-1]
+
+    A = np.sum(cut1)/2
+    B1 = np.sum(cut2)/2
+    AB1 = np.sum(cut3)
+    tmp = 2*AB1/((tau2-tau1)*(tau1)) - 2*B1/((tau2-tau1-1)*(tau2-tau1)) - 2*A/((tau1-1)*(tau1))
+    tmp *= (tau1*(tau2-tau1)/tau2)
+    if(tmp > best[1]):
+        best[0] = tau1+s
+        best[1] = tmp
+    
+    tau2+=1
+    B = np.zeros((e+1, B1))
+    AB = np.zeros((e + 1, AB1))
+
+    while(tau2 <= e):
+        B[tau2] = B[tau2-1] + np.sum(D[tau2-1][tau1:tau2-2])
+        AB[tau2] = AB[tau2-1] + np.sum(D[tau2-1][0:tau1-1])
+        tmp = 2*AB[tau2]/((tau2-tau1)*(tau1))-2*B[tau2]/((tau2-tau1-1)*(tau2-tau1))-2*A/((tau1)*(tau1-1))
+        tmp *= (tau1*(tau2-tau1)/tau2)
+        if(tmp > best[1]):
+            best[0] = tau1+s
+            best[1] = tmp
+        tau2 += 1
+
+    tau1+=1
+    tau2 = tau1+min_size
+    while(tau2 <= e):
+        addA = np.sum(D[tau1-1][0:tau1-2])
+        A += addA
+        addB = np.sum(D[tau1-1][tau1:tau2-2])
+        while(tau2 <= e):
+            addB += D[tau1-1][tau2-1]
+            B[tau2] -=addB
+            AB[tau2]+=(addB-addA)
+            tmp = 2*AB[tau2]/((tau2-tau1)*(tau1))-2*B[tau2]/((tau2-tau1-1)*(tau2-tau1)) - 2*A/((tau1-1)*(tau1))
+            tmp *= (tau1*(tau2-tau1)/tau2)
+            if(tmp > best[1]):
+                best[0] = tau1+s
+                best[1] = tmp
+            tau2+=1
+
+        tau1 += 1
+        tau2 = tau1+min_size
+
+    return best       
+
 
 def sig_test(D, R, changes, min_size, obs):
     #No permutations, so return a p-value of 0
