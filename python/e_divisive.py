@@ -41,7 +41,7 @@ def e_divisive(X, sig_lvl = 0.05, R = 199, k = None, min_size = 30, alpha = 1):
         con = tmp[-1]
 
         #Not able to meet minimum size constraint
-        if(con == -1) or (e_stat == 0.0):
+        if(con == -1):
             break 
         #run permutation test
         result = sig_test(D, R, changes, min_size, e_stat)
@@ -57,14 +57,14 @@ def e_divisive(X, sig_lvl = 0.05, R = 199, k = None, min_size = 30, alpha = 1):
         ret["k_hat"] = ret["k_hat"]+1 #update number of clusters
         k = k-1
 
-    tmp = copy.deepcopy(changes)
-    tmp.sort()
+    estimates = copy.deepcopy(changes)
+    estimates.sort()
     ret["order_found"] = changes
-    ret["estimates"] = tmp
+    ret["estimates"] = estimates
     ret["considered_last"] = con
     ret["p_values"] = pvals
     ret["permutations"] = permutations
-    ret["cluster"] = np.repeat(np.arange(0,len(np.diff(tmp))), np.diff(tmp))
+    ret["cluster"] = np.repeat(np.arange(0,len(np.diff(estimates))), np.diff(estimates))
     return ret
 
 def e_split(changes, D, min_size, for_sim = False, energy = None):
@@ -86,8 +86,7 @@ def e_split(changes, D, min_size, for_sim = False, energy = None):
                 jj = splits[i] - 1
                 best = tmp #update best split point found so far
         #update the list of changepoints
-        if best[0] != -1:
-            changes.append(int(best[0]))
+        changes.append(int(best[0]))
         return {"start": ii, "end": jj, "changes": changes, "best": best[1]}
     else:
         if(energy is None):
@@ -95,8 +94,9 @@ def e_split(changes, D, min_size, for_sim = False, energy = None):
         
         #iterate over intervals
         for i in range(1, len(splits)):
+            #print(energy)
             if(energy[splits[i-1],0]):
-                tmp = energy[splits[i-1]]
+                tmp = energy[splits[i-1],:]
             else:
                 tmp = splitPoint(splits[i-1], splits[i]-1, D, min_size)
                 energy[splits[i-1], 0] = tmp[0]
@@ -119,65 +119,64 @@ def splitPoint(start, end, D, min_size):
         return [-1, float("-inf")]
     
     #use needed part of distance matrix
-    D = D[start:end, start:end]
+    D = D[start:end+1, start:end+1]
     return splitPointpseudoC(start, end, D, min_size)
-
+    
 def splitPointpseudoC(s, e, D, min_size):
     """ This function used to be written in C++. However, it used SEXP to return
         a numeric vector data type, which is incompatible with Python. As such, 
         the function is temporarily rewritten in Python, but could be made faster
         by replacing this with a Python to C++ call.
     """
-    best = [-1.0, float('-inf')]
+    best = [-1.0, float("-inf")]
     e = e - s + 1
-    tau1 = min_size
-    tau2 = min_size << 1
-    cut1 = D[0:tau1-1, 0:tau1-1]
-    cut2 = D[tau1:tau2-1, tau1:tau2-1]
-    cut3 = D[0:tau1-1, tau1:tau2-1]
+    t1 = min_size
+    t2 = min_size <<1
+    cut1 = D[0:t1, 0:t1]
+    cut2 = D[t1:t2, t1:t2]
+    cut3 = D[0:t1, t1:t2]
     A = np.sum(cut1)/2
     B1 = np.sum(cut2)/2
     AB1 = np.sum(cut3)
-    tmp = 2*AB1/((tau2-tau1)*(tau1)) - 2*B1/((tau2-tau1-1)*(tau2-tau1)) - 2*A/((tau1-1)*(tau1))
-    tmp *= (tau1*(tau2-tau1)/tau2)
+    tmp = 2*AB1/((t2-t1)*(t1)) - 2*B1/((t2-t1-1)*(t2-t1)) - 2*A/((t1-1)*(t1))
+    tmp *= (t1*(t2-t1)/t2)
     if(tmp > best[1]):
-        best[0] = tau1+s
+        best[0] = t1 + s
         best[1] = tmp
-    
-    tau2+=1
+    t2+=1
     B = np.full(e+1, B1)
     AB = np.full(e+1, AB1)
-
-    while(tau2 < e):
-        B[tau2] = B[tau2-1] + np.sum(D[tau2-1, tau1:tau2-2])
-        AB[tau2] = AB[tau2-1] + np.sum(D[tau2-1, 0:tau1-1])
-        tmp = 2*AB[tau2]/((tau2-tau1)*(tau1))-2*B[tau2]/((tau2-tau1-1)*(tau2-tau1))-2*A/((tau1)*(tau1-1))
-        tmp *= (tau1*(tau2-tau1)/tau2)
-        if(tmp > best[1]):
-            best[0] = tau1+s
+    while(t2 <= e):
+        B[t2] = B[t2 - 1] + np.sum(D[t2-1, t1:t2-1])
+        AB[t2] = AB[t2-1] + np.sum(D[t2-1, 0:t1])
+        tmp = 2*AB[t2]/((t2-t1)*(t1))-2*B[t2]/((t2-t1-1)*(t2-t1))-2*A/((t1)*(t1-1))
+        tmp *= (t1*(t2-t1)/t2)
+        if (tmp > best[1]):
+            best[0] = t1 + s
             best[1] = tmp
-        tau2 += 1
+        t2 += 1
+    
+    t1 += 1
 
-    tau1+=1
-    tau2 = tau1+min_size
-    while(tau2 < e):
-        addA = np.sum(D[tau1-1, 0:tau1-2])
+    while(True):
+        t2 = t1+ min_size
+        if(t2 > e):
+            break
+        addA = np.sum(D[t1-1, 0:t1-1])
         A += addA
-        addB = np.sum(D[tau1-1, tau1:tau2-2])
-        while(tau2 < e):
-            addB += D[tau1-1, tau2-1]
-            B[tau2] -=addB
-            AB[tau2]+=(addB-addA)
-            tmp = 2*AB[tau2]/((tau2-tau1)*(tau1))-2*B[tau2]/((tau2-tau1-1)*(tau2-tau1)) - 2*A/((tau1-1)*(tau1))
-            tmp *= (tau1*(tau2-tau1)/tau2)
+        addB = np.sum(D[t1-1, t1:t2-1])
+        while(t2 <= e):
+            addB += D[t1-1, t2-1]
+            B[t2] -= addB
+            AB[t2] += (addB-addA)
+            tmp = 2*AB[t2]/((t2-t1)*(t1))-2*B[t2]/((t2-t1-1)*(t2-t1))-2*A/((t1-1)*(t1))
+            tmp *= (t1*(t2-t1)/t2)
             if(tmp > best[1]):
-                best[0] = tau1+s
+                best[0] = t1+s
                 best[1] = tmp
-            tau2+=1
-
-        tau1 += 1
-        tau2 = tau1+min_size
-    return best       
+            t2 += 1
+        t1 += 1
+    return best     
 
 
 def sig_test(D, R, changes, min_size, obs):
