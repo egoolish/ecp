@@ -53,6 +53,7 @@ def e_divisive(X, sig_lvl = 0.05, R = 199, k = None, min_size = 30, alpha = 1):
         #change point not significant
         if(pval > sig_lvl):
             break
+        
         changes = copy.deepcopy(tmp) #update set of change points
         ret["k_hat"] = ret["k_hat"]+1 #update number of clusters
         k = k-1
@@ -68,6 +69,7 @@ def e_divisive(X, sig_lvl = 0.05, R = 199, k = None, min_size = 30, alpha = 1):
     return ret
 
 def e_split(changes, D, min_size, for_sim = False, energy = None):
+    changes = copy.deepcopy(changes)
     splits = copy.deepcopy(changes)
     splits.sort()
     best = [-1, float('-inf')]
@@ -94,7 +96,6 @@ def e_split(changes, D, min_size, for_sim = False, energy = None):
         
         #iterate over intervals
         for i in range(1, len(splits)):
-            #print(energy)
             if(energy[splits[i-1],0]):
                 tmp = energy[splits[i-1],:]
             else:
@@ -184,14 +185,16 @@ def sig_test(D, R, changes, min_size, obs):
     if(R == 0): 
         return [0, 0]
     over = 0
-    for f in range(R):
-        D1 = perm_cluster(D, changes) #permute within cluster
-        tmp = e_split(changes, D1, min_size, True)
+    for _ in range(R):
+        Dcopy = np.copy(D)
+        changes_copy = copy.deepcopy(changes)
+        changes_copy2 = copy.deepcopy(changes)
+        D1 = perm_cluster(Dcopy, changes_copy) #permute within cluster
+        tmp = e_split(changes_copy2, D1, min_size, True)
         if(tmp['best'] >= obs):
             over = over + 1
-    f+=1
-    pval = (1 + over)/(f + 1)
-    return [pval, f]
+    pval = (1 + over)/(R + 1)
+    return [pval, R]
 
 def perm_cluster(D, points):
     points.sort()

@@ -12,7 +12,6 @@ print(names_to_install)
 if len(names_to_install) > 0:
     utils.install_packages(StrVector(names_to_install))
 
-#y = e.divisive(X=x1,sig.lvl=0.05,R=199,k=NULL,min.size=30,alpha=1)
 data = robjects.r("""
     library(ecp)
     set.seed(100)
@@ -35,7 +34,12 @@ print(pyY2_no_perm)
 rY2_no_perm = robjects.r["y2_no_perm"]
 print(rY2_no_perm)
 
-# pyY1 = pye.e_divisive(X = pyX1, sig_lvl = 0.05, R = 199, k = None, min_size = 30, alpha = 1)
-# print(pyY1)
-# rY1 = robjects.r["y1"]
-# print(rY1)
+pyY1 = pye.e_divisive(X = pyX1, sig_lvl = 0.05, R = 199, k = None, min_size = 30, alpha = 1)
+print(pyY1)
+rY1 = robjects.r["y1"]
+print(rY1)
+
+pyY2 = pye.e_divisive(X = pyX2, sig_lvl = 0.05, R = 499, k = None, min_size = 30, alpha = 1)
+print(pyY2)
+rY2 = robjects.r["y2"]
+print(rY2)
