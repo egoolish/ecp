@@ -18,18 +18,24 @@ data = robjects.r("""
     set.seed(100)
     x1 = matrix(c(rnorm(100),rnorm(100,3),rnorm(100,0,2)))
     x2 = rbind(MASS::mvrnorm(100,c(0,0),diag(2)), MASS::mvrnorm(100,c(2,2),diag(2)))
-    y = e.divisive(X = x1, k = 2, min.size = 30, alpha = 1)
-    y2 = e.divisive(X = x2, k = 1, min.size = 30, alpha = 1)
+    y1 = e.divisive(X=x1,sig.lvl=0.05,R=199,k=NULL,min.size=30,alpha=1)
+    y2 = e.divisive(X=x2,sig.lvl=0.05,R=499,k=NULL,min.size=30,alpha=1)
+    y1_no_perm = e.divisive(X = x1, k = 2, min.size = 30, alpha = 1)
+    y2_no_perm = e.divisive(X = x2, k = 1, min.size = 30, alpha = 1)
     """)
 pyX1 = np.array(robjects.r["x1"])
-pyY1 = pye.e_divisive(X = pyX1, k = 2, min_size = 30, alpha = 1)
-print(pyY1)
-rY = robjects.r["y"]
-print(rY)
+pyY1_no_perm = pye.e_divisive(X = pyX1, k = 2, min_size = 30, alpha = 1)
+print(pyY1_no_perm)
+rY1_no_perm = robjects.r["y1_no_perm"]
+print(rY1_no_perm)
 
-# pyX2 = np.array(robjects.r["x2"])
-# print(pyX2.shape)
-# pyY2 = pye.e_divisive(X = pyX2, k = 1, min_size = 30, alpha = 1)
-# print(pyY2)
-# rY2 = robjects.r["y2"]
-# print(rY2)
+pyX2 = np.array(robjects.r["x2"])
+pyY2_no_perm = pye.e_divisive(X = pyX2, k = 1, min_size = 30, alpha = 1)
+print(pyY2_no_perm)
+rY2_no_perm = robjects.r["y2_no_perm"]
+print(rY2_no_perm)
+
+# pyY1 = pye.e_divisive(X = pyX1, sig_lvl = 0.05, R = 199, k = None, min_size = 30, alpha = 1)
+# print(pyY1)
+# rY1 = robjects.r["y1"]
+# print(rY1)
