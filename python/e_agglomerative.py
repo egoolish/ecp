@@ -26,8 +26,8 @@ def e_agglo(X, member = None, alpha = 1, penalty = lambda cps : 0):
         ret = update_distance(best[0], best[1], k, ret)
     
     # Penalize the GOF statistic
-    cps = #TODO: #apply(ret$progression,1,function(x){x[!is.na(x)]})
-    ret["fit"] = #TODO: #ret$fit + sapply(cps,penalty)
+    cps = [x[~np.isnan(x)] for x in np.array(ret["progression"].tolist())]
+    ret["fit"] = ret["fit"] + map(penalty, cps)
 
     # Get the set of change points for the "best" clustering
     ret["estimates"] = np.argmax(ret["fit"])
@@ -98,14 +98,14 @@ def process_data(member, X, alpha):
 
     #Array of within distances
     within = np.zeros(n)
-    for i in range(n): #TODO: np.cov?
+    for i in range(n):
         within[i] = get_within(alpha, np.full((ret["sizes"][i], X.shape[1]), X[member == i]))
     
     #Make distance matrix
     ret["d"] = np.full((2*n, 2*n), 0)
     for i in range(n):
         for j in range(i, n):
-            if (j != i): #TODO: scipy.stats.energy_distance?
+            if (j != i): 
                 gb = get_between(alpha,
                     np.full((ret["sizes"][i], X.shape[1]), X[member==i]),
                     np.full((ret["sizes"][j], X.shape[1]), X[member==j])) - within[i] - within[j]
@@ -227,3 +227,23 @@ def update_distance(i, j, k, ret):
             ret["d"][kk, k+1] = hold
 
     return ret
+
+#Consider using: scipy.stats.energy_distance
+def get_within(alpha, X):
+    alpha = float(alpha)
+    ret = 0.0
+    n = X.shape[0]
+    for i in range(n):
+        for j in range(n):
+            ret += np.power(np.sqrt(np.sum(np.power(X[i] - X[j], 2))), alpha)
+    return (ret/(n*n))
+
+def get_between(alpha, X, Y):
+    alpha = float(alpha)
+    ret = 0.0
+    n = X.shape[0]
+    m = Y.shape[0]
+    for i in range(n):
+        for j in range(m):
+            ret += np.power(np.sqrt(np.sum(np.power(X[i]-Y[j], 2))), alpha)
+    return (2*ret)/(n*m)
