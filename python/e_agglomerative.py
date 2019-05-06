@@ -14,11 +14,10 @@ def e_agglo(X, member = None, alpha = 1, penalty = lambda cps : 0):
     n = ret["n"]
 
     #Find which clusters optimize the GOF and then update distances
-    for k in range(n, 2*n-1):
+    for k in range(n-1+1, 2*n-2+1):
 
         #find which clusters to merge
         best = find_closest(k, ret) 
-
         #update GOF statistic
         ret["fit"].append(best[2])
 
@@ -27,12 +26,11 @@ def e_agglo(X, member = None, alpha = 1, penalty = lambda cps : 0):
     
     # Penalize the GOF statistic
     cps = [x[~np.isnan(x)] for x in np.array(ret["progression"].tolist())]
-    ret["fit"] = ret["fit"] + map(penalty, cps)
-
+    ret["fit"] = np.trim_zeros(ret["fit"] + list(map(penalty, cps)))
     # Get the set of change points for the "best" clustering
     ret["estimates"] = np.argmax(ret["fit"])
     ret["estimates"] = np.sort(ret["progression"][ret["estimates"]])
-
+    ret["estimates"] = ret["estimates"][~np.isnan(ret["estimates"])].astype(int)
     # Remove change point N + 1 if a cyclic merger was performed
     if(ret["estimates"][0] != 1):
         ret["estimates"] = ret["estimates"][:-1]
@@ -43,9 +41,10 @@ def e_agglo(X, member = None, alpha = 1, penalty = lambda cps : 0):
         ret["cluster"] = np.repeat(np.arange(0,len(np.diff(tmp))), np.diff(tmp))
     else:
         tmp = np.insert(tmp, 0, 0)
+
         ret["cluster"] = np.repeat(np.arange(0,len(np.diff(tmp))), np.diff(tmp))
-        k = X.shape[0] - np.size(ret["cluster"])
-        np.append(ret["cluster"], np.zeros(k))
+        k = X.shape[0] - np.size(ret["cluster"]) + 1
+        ret["cluster"] = np.append(ret["cluster"], np.zeros(k, dtype = int))
     
     # Remove unnecessary output info
     rem = ["n", "left", "open", "d", "right", "lm", "sizes"]
@@ -69,11 +68,11 @@ def process_data(member, X, alpha):
     if(not np.all(member[:-1] <= member[1:])):
         raise ValueError("Segments must be contiguous.")
     
-    ret["sizes"] = np.zeros(2*n)
+    ret["sizes"] = np.zeros(2*n, dtype = int)
 
     #Left and Right neighbors of a cluster
-    ret["right"] = np.zeros(2*n - 1)
-    ret["left"] = np.zeros(2*n - 1)
+    ret["right"] = np.zeros(2*n - 1, dtype = int)
+    ret["left"] = np.zeros(2*n - 1, dtype = int)
 
     #True means that a cluster has not been merged
     ret["open"] = np.ones(2*n - 1, dtype = bool)
@@ -81,7 +80,6 @@ def process_data(member, X, alpha):
     #Calculate initial cluster sizes
     for i in range(n):
         ret["sizes"][i] = np.sum(member==i)
-
     #Set up left and right neighbors
     for i in range(1, n-1):
         ret["left"][i] = i - 1
@@ -94,15 +92,14 @@ def process_data(member, X, alpha):
     ret["right"][0] = 1
 
     #Matrix to say which clusters were merged at each step
-    ret["merged"] = np.zeros((n-1, 2))
+    ret["merged"] = np.full((n-1, 2), np.nan)
 
     #Array of within distances
     within = np.zeros(n)
     for i in range(n):
         within[i] = get_within(alpha, np.full((ret["sizes"][i], X.shape[1]), X[member == i]))
-    
     #Make distance matrix
-    ret["d"] = np.full((2*n, 2*n), 0)
+    ret["d"] = np.full((2*n, 2*n), np.float("inf"))
     for i in range(n):
         for j in range(i, n):
             if (j != i): 
@@ -111,11 +108,11 @@ def process_data(member, X, alpha):
                     np.full((ret["sizes"][j], X.shape[1]), X[member==j])) - within[i] - within[j]
                 ret["d"][i, j] = gb
                 ret["d"][j, i] = gb
-    
+    np.fill_diagonal(ret["d"], 0.0)
     #Set initial GOF value
     for i in range(n):
         fit = fit + ret["d"][i, ret["left"][i]] + ret["d"][i, ret["right"][i]]
-    ret["fit"] = fit
+    ret["fit"] = [fit]
 
     #Create matrix for change point progressoin
     ret["progression"] = np.full((n, n+1), np.nan)
@@ -124,7 +121,8 @@ def process_data(member, X, alpha):
         ret["progression"][0, i] = ret["progression"][0, i - 1] + ret["sizes"][i-1]
     
     #Vector to specify the starting point of a cluster
-    ret["lm"] = np.arange(n)
+    ret["lm"] = np.zeros(2*n-1, dtype = int)
+    ret["lm"][:n] = np.arange(n)
     return ret
 
 # Determine which clusters will be merged. Returns a tuple of length 3: the first
@@ -137,11 +135,10 @@ def find_closest(k, ret):
     
     #iterate to see how the GOF value changes
     for i in range(k):
-        if (ret["open"[i]]):
+        if (ret["open"][i]):
 
             #Get updated GOF value
             x = gof_update(i, ret)
-
             #Better value found so update
             if (x > best):
                 best = x
@@ -159,10 +156,8 @@ def gof_update(i, ret):
     #Get new left and right clusters
     rr = ret["right"][j]
     ll = ret["left"][i]
-
     #Remove unneded values in the GOF
-    fit = fit - 2*(ret["d"][i, j]) + ret["d"][i, ll] + ret["d"][j, rr]
-
+    fit = fit - 2*(ret["d"][i, j] + ret["d"][i, ll] + ret["d"][j, rr])
     #Get cluster sizes
     n1 = ret["sizes"][i]
     n2 = ret["sizes"][j]
@@ -183,11 +178,11 @@ def gof_update(i, ret):
 # i is assumed to be the left cluster. Also #updates any other necessary 
 # information in [ret].
 def update_distance(i, j, k, ret):
+    k -=1
     n = ret["n"]
-
     # Say which clusters were merged
     if (i <= n):
-        ret["merged"][k - n, 0] = -i
+        ret["merged"][k - n + 1, 0] = -i
     else:
         ret["merged"][k - n + 1, 0] = i - n
     if (j <= n):
@@ -210,19 +205,20 @@ def update_distance(i, j, k, ret):
     #Assign size to newly created cluster
     n1 = ret["sizes"][i]
     n2 = ret["sizes"][j]
-    ret["sizes"][k + 1] = n1+ n2
+    ret["sizes"][k + 1] = n1 + n2
 
     #Update set of change points
     ret["progression"][k-n+2] = ret["progression"][k-n+1]
     ret["progression"][k-n+2, ret["lm"][j]] = np.nan
     ret["lm"][k+1] = ret["lm"][i]
 
+    
     #Update distances
-    for kk in range(k):
+    for kk in range(k+1):
         if (ret["open"][kk]):
             n3 = ret["sizes"][kk]
             nn = n1+n2+n3
-            hold = ((nn -n2)*ret["d"][i, kk] + (nn-n1)*ret["d"][j, k] - n3*ret["d"][i, j])/nn
+            hold = ((nn-n2)*ret["d"][i, kk] + (nn-n1)*ret["d"][j, kk] - n3*ret["d"][i, j])/nn
             ret["d"][k+1, kk] = hold
             ret["d"][kk, k+1] = hold
 
@@ -235,7 +231,7 @@ def get_within(alpha, X):
     n = X.shape[0]
     for i in range(n):
         for j in range(n):
-            ret += np.power(np.sqrt(np.sum(np.power(X[i] - X[j], 2))), alpha)
+            ret += np.power(np.sqrt(np.sum((X[i, :] - X[j, :])*(X[i, :] - X[j, :]))), alpha)
     return (ret/(n*n))
 
 def get_between(alpha, X, Y):
@@ -246,4 +242,4 @@ def get_between(alpha, X, Y):
     for i in range(n):
         for j in range(m):
             ret += np.power(np.sqrt(np.sum(np.power(X[i]-Y[j], 2))), alpha)
-    return (2*ret)/(n*m)
+    return (2*ret)/float(n*m)
