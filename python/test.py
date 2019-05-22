@@ -24,7 +24,7 @@ def agglo_compare(pydict, renv, output = False):
     if(output):
         print("Python: " + str(pyfit))
         print("R: " + str(rfit))
-    print("Comparison: " + \
+    print("Comparison (Norm of Difference): " + \
         str(np.linalg.norm(pyfit - rfit)))
     print()
 
@@ -36,8 +36,8 @@ def agglo_compare(pydict, renv, output = False):
         print("R: " + str(rprog))
     pyprog[np.isnan(pyprog)] = -1
     rprog[np.isnan(rprog)] = 0 
-    print("Comparison: " + \
-        str(np.linalg.norm((pyprog + 1) - rprog)))
+    print("Comparison (Number of entries that differ): " + \
+        str(np.sum((pyprog + 1) != rprog)))
     print()
 
     print("Estimates: ")
@@ -46,8 +46,8 @@ def agglo_compare(pydict, renv, output = False):
     if(output):
         print("Python: " + str(pyest))
         print("R: " + str(rest))
-    print("Comparison: " + \
-        str(np.linalg.norm((pyest+1) - rest)))
+    print("Comparison (Number of entries that differ): " + \
+        str(np.sum((pyest+1) != rest)))
     print()
 
     print("Cluster: ")
@@ -56,8 +56,8 @@ def agglo_compare(pydict, renv, output = False):
     if(output):
         print("Python: " + str(pyclust))
         print("R: " + str(rclust))
-    print("Comparison: " + \
-        str(np.linalg.norm((pyclust+1) - rclust)))
+    print("Comparison (Number of entries that differ): " + \
+        str(np.sum((pyclust+1) != rclust)))
     return None
 
 utils = rpackages.importr('utils')
