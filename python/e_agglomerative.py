@@ -15,7 +15,6 @@ def e_agglo(X, member = None, alpha = 1, penalty = lambda cps : 0):
 
     #Find which clusters optimize the GOF and then update distances
     for k in range(n-1+1, 2*n-2+1):
-
         #find which clusters to merge
         best = find_closest(k, ret) 
         #update GOF statistic
@@ -31,8 +30,13 @@ def e_agglo(X, member = None, alpha = 1, penalty = lambda cps : 0):
     ret["estimates"] = np.argmax(ret["fit"])
     ret["estimates"] = np.sort(ret["progression"][ret["estimates"]])
     ret["estimates"] = ret["estimates"][~np.isnan(ret["estimates"])].astype(int)
+    
+    #Fix the Python 0-indexing.
+    ret["estimates"] = ret["estimates"] - 1
+    ret["progression"] = ret["progression"] - 1
+
     # Remove change point N + 1 if a cyclic merger was performed
-    if(ret["estimates"][0] != 1):
+    if(ret["estimates"][0] != 0):
         ret["estimates"] = ret["estimates"][:-1]
     
     # Create final membership vector
@@ -43,7 +47,7 @@ def e_agglo(X, member = None, alpha = 1, penalty = lambda cps : 0):
         tmp = np.insert(tmp, 0, 0)
 
         ret["cluster"] = np.repeat(np.arange(0,len(np.diff(tmp))), np.diff(tmp))
-        k = X.shape[0] - np.size(ret["cluster"]) + 1
+        k = X.shape[0] - np.size(ret["cluster"])
         ret["cluster"] = np.append(ret["cluster"], np.zeros(k, dtype = int))
     
     # Remove unnecessary output info
@@ -98,6 +102,7 @@ def process_data(member, X, alpha):
     within = np.zeros(n)
     for i in range(n):
         within[i] = get_within(alpha, np.full((ret["sizes"][i], X.shape[1]), X[member == i]))
+    
     #Make distance matrix
     ret["d"] = np.full((2*n, 2*n), np.float("inf"))
     for i in range(n):
@@ -109,6 +114,7 @@ def process_data(member, X, alpha):
                 ret["d"][i, j] = gb
                 ret["d"][j, i] = gb
     np.fill_diagonal(ret["d"], 0.0)
+
     #Set initial GOF value
     for i in range(n):
         fit = fit + ret["d"][i, ret["left"][i]] + ret["d"][i, ret["right"][i]]
