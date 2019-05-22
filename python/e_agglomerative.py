@@ -235,17 +235,30 @@ def get_within(alpha, X):
     alpha = float(alpha)
     ret = 0.0
     n = X.shape[0]
-    for i in range(n):
-        for j in range(n):
-            ret += np.power(np.sqrt(np.sum((X[i, :] - X[j, :])*(X[i, :] - X[j, :]))), alpha)
-    return (ret/(n*n))
+
+    #Slow C version
+    # for i in range(n):
+    #     for j in range(n):
+    #         ret += np.power(np.sqrt(np.sum((X[i, :] - X[j, :])*(X[i, :] - X[j, :]))), alpha)
+    # return (ret/(n*n))
+
+    #Vectorized:
+    Xprime = X.reshape(n, 1, X.shape[1])
+    ret = np.sum(np.power(np.sqrt(np.einsum('ijk, ijk->ij', X-Xprime, X-Xprime)), alpha))
+    return ret/(n*n)
 
 def get_between(alpha, X, Y):
     alpha = float(alpha)
     ret = 0.0
     n = X.shape[0]
     m = Y.shape[0]
-    for i in range(n):
-        for j in range(m):
-            ret += np.power(np.sqrt(np.sum(np.power(X[i]-Y[j], 2))), alpha)
+
+    #Slow C version
+    # for i in range(n):
+    #     for j in range(m):
+    #         ret += np.power(np.sqrt(np.sum(np.power(X[i]-Y[j], 2))), alpha)
+    
+    #Vectorized:
+    X = X.reshape(X.shape[0], 1, X.shape[1])
+    ret = np.sum(np.power(np.sqrt(np.einsum('ijk, ijk->ij', X-Y, X-Y)), alpha))
     return (2*ret)/float(n*m)

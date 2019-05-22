@@ -125,34 +125,34 @@ rY1 = robjects.r["y_agg"]
 agglo_compare(py_agglo_Y1, rY1, True)
 
 # Warning: In the current implementation this takes ~20 minutes to run.
-# py_agglo_X2 = np.array(robjects.r["x_agg2"])
-# py_agglo_mem2 = np.array(robjects.r["x_mem2"])
-# py_agglo_Y2 = \
-#     e_agglomerative.e_agglo(X = py_agglo_X2, \
-#                             member = py_agglo_mem2, \
-#                             alpha = 1, \
-#                             penalty =  (lambda cp : 0))
-# rY2 = robjects.r["y_agg2"]
-# agglo_compare(py_agglo_Y2, rY2, False)
+py_agglo_X2 = np.array(robjects.r["x_agg2"])
+py_agglo_mem2 = np.array(robjects.r["x_mem2"])
+py_agglo_Y2 = \
+    e_agglomerative.e_agglo(X = py_agglo_X2, \
+                            member = py_agglo_mem2, \
+                            alpha = 1, \
+                            penalty =  (lambda cp : 0))
+rY2 = robjects.r["y_agg2"]
+agglo_compare(py_agglo_Y2, rY2, False)
 
-pyX1 = np.array(robjects.r["x1"])
-pyY1_no_perm = pye.e_divisive(X = pyX1, k = 2, min_size = 30, alpha = 1)
-print(pyY1_no_perm)
-rY1_no_perm = robjects.r["y1_no_perm"]
-print(rY1_no_perm)
+# pyX1 = np.array(robjects.r["x1"])
+# pyY1_no_perm = pye.e_divisive(X = pyX1, k = 2, min_size = 30, alpha = 1)
+# print(pyY1_no_perm)
+# rY1_no_perm = robjects.r["y1_no_perm"]
+# print(rY1_no_perm)
 
-pyX2 = np.array(robjects.r["x2"])
-pyY2_no_perm = pye.e_divisive(X = pyX2, k = 1, min_size = 30, alpha = 1)
-print(pyY2_no_perm)
-rY2_no_perm = robjects.r["y2_no_perm"]
-print(rY2_no_perm)
+# pyX2 = np.array(robjects.r["x2"])
+# pyY2_no_perm = pye.e_divisive(X = pyX2, k = 1, min_size = 30, alpha = 1)
+# print(pyY2_no_perm)
+# rY2_no_perm = robjects.r["y2_no_perm"]
+# print(rY2_no_perm)
 
-pyY1 = pye.e_divisive(X = pyX1, sig_lvl = 0.05, R = 199, k = None, min_size = 30, alpha = 1)
-print(pyY1)
-rY1 = robjects.r["y1"]
-print(rY1)
+# pyY1 = pye.e_divisive(X = pyX1, sig_lvl = 0.05, R = 199, k = None, min_size = 30, alpha = 1)
+# print(pyY1)
+# rY1 = robjects.r["y1"]
+# print(rY1)
 
-pyY2 = pye.e_divisive(X = pyX2, sig_lvl = 0.05, R = 499, k = None, min_size = 30, alpha = 1)
-print(pyY2)
-rY2 = robjects.r["y2"]
-print(rY2)
+# pyY2 = pye.e_divisive(X = pyX2, sig_lvl = 0.05, R = 499, k = None, min_size = 30, alpha = 1)
+# print(pyY2)
+# rY2 = robjects.r["y2"]
+# print(rY2)
